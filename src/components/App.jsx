@@ -112,9 +112,7 @@ export class App extends Component {
 
         {status === STATUS.PENDING && <Loader />}
 
-        {status === STATUS.RESOLVED && (
-          <ImageGallery images={images} onClick={this.onOpenModal} />
-        )}
+        <ImageGallery images={images} onClick={this.onOpenModal} />
 
         {showBtn && (
           <Button onClick={this.handleLoadMore}>
