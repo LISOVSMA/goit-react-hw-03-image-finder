@@ -1,7 +1,6 @@
 import { Component } from 'react';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import debounce from 'lodash.debounce';
 import { ImageGallery } from 'components/ImageGallery/ImageGallery';
 import { Searchbar } from 'components/Searchbar/Searchbar';
 import { Error } from 'components/Error/Error';
@@ -9,7 +8,6 @@ import { Loader } from 'components/Loader/Loader';
 import { Button } from 'components/Button/Button';
 import { Modal } from 'components/Modal/Modal';
 import { notification } from '../notification/notification';
-import { smoothScroll } from '../scroll/smoothScroll';
 import { getImages } from '../api/getImages';
 import { Container } from './App.styled';
 
@@ -26,15 +24,11 @@ export class App extends Component {
     searchQuery: '',
     images: [],
     page: 1,
-    totalPage: null,
     error: null,
     showModal: false,
+    showBtn: false,
     modalImage: '',
   };
-
-  componentDidMount() {
-    this.fetchImages();
-  }
 
   async componentDidUpdate(_, prevState) {
     const { searchQuery, page } = this.state;
@@ -46,7 +40,7 @@ export class App extends Component {
   }
 
   fetchImages = async () => {
-    const { searchQuery, page, images } = this.state;
+    const { searchQuery, page } = this.state;
     await this.setState({ status: STATUS.PENDING });
 
     try {
@@ -58,18 +52,17 @@ export class App extends Component {
         return;
       }
 
-      this.setState({
-        images: [...images, ...hits],
-        totalPage: totalHits,
+      this.setState(prevState => ({
+        images: [...prevState.images, ...hits],
         status: STATUS.RESOLVED,
-        error: null,
-      });
+        showBtn: page < Math.ceil(totalHits / 12),
+      }));
     } catch (error) {
       this.setState({ error: error.message, status: STATUS.REJECTED });
     }
   };
 
-  handleChangeSearchQuery = debounce(searchQuery => {
+  handleChangeSearchQuery = searchQuery => {
     if (searchQuery === this.state.searchQuery) {
       notification(`Images of ${searchQuery} have already been displayed.`);
       return;
@@ -79,19 +72,15 @@ export class App extends Component {
       searchQuery,
       images: [],
       page: 1,
-      totalPage: null,
       error: null,
       showModal: false,
+      showBtn: false,
       modalImage: '',
     });
-  }, 1000);
+  };
 
   handleLoadMore = () => {
     this.setState(prevState => ({ page: prevState.page + 1 }));
-
-    setTimeout(() => {
-      smoothScroll();
-    }, 500);
   };
 
   onOpenModal = ({ target }) => {
@@ -111,10 +100,8 @@ export class App extends Component {
   };
 
   render() {
-    const { status, images, totalPage, error, page, modalImage, showModal } =
+    const { status, images, error, modalImage, showModal, showBtn } =
       this.state;
-    const showLoadMoreButton =
-      images.length !== 0 && totalPage / images.length > page;
 
     return (
       <Container>
@@ -129,11 +116,8 @@ export class App extends Component {
           <ImageGallery images={images} onClick={this.onOpenModal} />
         )}
 
-        {showLoadMoreButton && (
-          <Button
-            onClick={this.handleLoadMore}
-            disabled={status === STATUS.PENDING ? true : false}
-          >
+        {showBtn && (
+          <Button onClick={this.handleLoadMore}>
             {status === STATUS.PENDING ? 'Loading...' : 'Load More'}
           </Button>
         )}
